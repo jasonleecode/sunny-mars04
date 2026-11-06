@@ -1,0 +1,9 @@
+/build*/
+/stage/
+/mars04-capture-*/
+*.yuv
+*.png
+*.ply
+*.csv
+capture.json
+.DS_Store

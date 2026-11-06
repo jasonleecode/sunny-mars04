@@ -1,0 +1,15 @@
+name: build
+on: [push, pull_request]
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [Release, Debug]
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cmake g++ pkg-config libusb-1.0-0-dev libpng-dev
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DMARS04_SANITIZERS=${{ matrix.mode == 'Debug' && 'ON' || 'OFF' }}
+      - run: cmake --build build --parallel 2
+      - run: ctest --test-dir build --output-on-failure
+      - run: ./build/mars04-capture --help
