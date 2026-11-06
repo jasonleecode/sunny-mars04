@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Mars04 Camera Lab
+Name[zh_CN]=Mars04 相机测试
+Comment=Live RGB, depth, interactive point cloud and experimental IMU diagnostics
+Comment[zh_CN]=实时图像、深度、交互点云与 IMU 诊断
+Exec=mars04-viewer
+Icon=camera-photo
+Terminal=false
+Categories=Graphics;Science;
+StartupWMClass=mars04-viewer

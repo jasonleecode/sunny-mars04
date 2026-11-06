@@ -24,6 +24,75 @@ Depth conversion uses the device's lens calibration and the matching SDK's
 range scale. Absolute distance accuracy has not been checked against a measured
 target. The old firmware does not supply the newer SDK's depth CRC.
 
+## Live graphical test program
+
+`mars04-viewer` is a C++ desktop application for live RGB, depth, an interactive
+XYZ point cloud and IMU diagnostics. It uses SDL2 and Cairo with a CPU renderer;
+no OpenGL, Qt, browser or Python runtime is required. It was tested on the N1
+X11/XFCE desktop. The interface uses English labels and the desktop launcher has
+a Chinese name on Chinese desktops.
+
+中文：运行后自动连接相机，同时显示彩色图像、彩色深度图、可旋转缩放的实时点云和
+IMU 九通道原始值/变化曲线。IMU 明确标记为“运动数据未验证”，异常大值不绘入曲线。
+桌面快捷方式名称为“**Mars04 相机测试**”。
+
+```sh
+sudo apt-get install libsdl2-dev libcairo2-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMARS04_BUILD_GUI=ON
+cmake --build build -j2
+sudo cmake --install build
+mars04-viewer
+```
+
+The GUI is optional and disabled by default. It needs the same camera USB
+permissions as the CLI. Runtime dependencies are `libsdl2-2.0-0`, `libcairo2`,
+libusb, and a sans-serif font (for example `fonts-dejavu-core`).
+
+| Action | Control |
+| --- | --- |
+| Rotate cloud | Left-drag inside the cloud viewport |
+| Pan cloud | Right-drag inside the cloud viewport |
+| Zoom cloud | Mouse wheel over the cloud panel |
+| Reset cloud view | **Reset 3D** button or `R` |
+| Full / half point density | `D` |
+| Freeze / resume display | **Freeze / Resume** button or Space |
+| Release / reopen the camera | **Disconnect / Reconnect** button |
+| Save screenshot and visible cloud | **Save view** button or `S` |
+| Exit | Window close button or Escape |
+
+Freeze pauses the display while acquisition continues. Disconnect releases the
+camera, preserving the last frames on screen. A failed connection or unplugged
+camera shows an error; reconnect explicitly after correcting it. Saving creates
+`~/Mars04-captures/gui-<timestamp>/view.png` and `cloud.ply` (ASCII XYZ in metres).
+These are local captures and are not included in the repository.
+
+The GUI bounds its buffers to the newest frame per image stream and 150 IMU
+samples, rather than building a growing playback queue. The RGB preview is
+downsampled to 672×380; the CLI still saves full-resolution RGB. Depth and point
+cloud use the complete 224×172 depth data. Cloud colour represents radial range
+on a 0–4 m scale; it is not projected RGB colour. The default 3D view is centered
+on the current valid cloud centroid. Streams are independent, not synchronized.
+
+IMU readings are explicitly experimental. The interface preserves raw values
+and raw timestamps, shows parser-error counts, and omits magnitudes ≥10000 from
+the autoscaled plots so firmware garbage does not destroy the plot scale.
+This threshold is a display guard, **not a physical validity criterion**.
+
+For a timed hardware/UI check:
+
+```sh
+mars04-viewer --run-seconds 20 --screenshot /tmp/view.png --report /tmp/view.json
+```
+
+The report records received RGB/depth frames, IMU records, valid cloud points,
+rendered frames and acquisition errors. A timed run returns failure if no RGB
+or depth frames were received. With no camera the UI still opens with an error
+and a reconnect button. The `--help` option requires neither a camera nor X11.
+
+Build the viewer in Docker with
+`docker build --platform linux/arm64 --build-arg MARS04_BUILD_GUI=ON -t sunny-mars04 .`;
+copy `/src/build/mars04-viewer` from the resulting container onto the N1.
+
 ## Build on Debian / Ubuntu
 
 ```sh

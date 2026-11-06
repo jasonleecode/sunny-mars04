@@ -47,3 +47,26 @@ Checks on the saved data:
 Absolute range accuracy, photometric accuracy, IMU sensor availability/units,
 cross-stream time synchronization, other firmware, multiple cameras, macOS,
 Windows and USB 3.0 operation have not been validated.
+
+## Graphical viewer
+
+The SDL2/Cairo GUI was built in the same arm64 Docker environment and run on
+the N1's 1920×1080 X11/XFCE desktop as the normal desktop user.
+
+A 20-second timed run received 150 RGB frames, 276 depth frames and 1924 IMU
+records, rendered 284 UI frames, and reported no acquisition error. One process
+sample showed approximately 110 MiB RSS and 90% of one CPU core; this is an
+observation, not a resource guarantee. No additional graphical runtime packages
+were installed on that N1.
+
+Actual mouse/keyboard interaction checks confirmed:
+
+- Frozen RGB pixel regions stayed unchanged across two screenshots.
+- Dragging the cloud while frozen changed the 3D projection.
+- Resuming advanced the displayed frame sequence.
+- Mouse-wheel zoom and reset controls were exercised.
+- Saving produced a local screenshot and ASCII PLY cloud.
+- Disconnect/reconnect reopened the camera and resumed incoming frames.
+
+Screenshots were reviewed locally for image content, cloud rendering and text
+layout; they contain private scene content and are not published.
