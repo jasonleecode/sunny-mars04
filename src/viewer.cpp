@@ -67,9 +67,14 @@ std::shared_ptr<Image> colour_preview(const mars04::RgbFrame& frame) {
     return out;
 }
 std::shared_ptr<Image> depth_preview(const mars04::DepthFrame& frame) {
+    static const auto palette=[] {
+        std::array<std::uint32_t,32768> colours{};colours[0]=0xff101a2bu;
+        for (std::size_t i=1;i<colours.size();++i) colours[i]=range_colour(double(i)/mars04::depth_units_per_metre);
+        return colours;
+    }();
     auto out=std::make_shared<Image>();out->w=int(mars04::depth_width);out->h=int(mars04::depth_height);
     out->pixels.reserve(frame.raw_depth.size());out->metadata=frame.metadata;
-    for (auto d:frame.raw_depth) out->pixels.push_back(d>0 ? range_colour(d/mars04::depth_units_per_metre) : 0xff101a2bu);
+    for (auto d:frame.raw_depth) out->pixels.push_back(palette[d>0 ? std::size_t(d) : 0]);
     return out;
 }
 struct State {
@@ -82,6 +87,7 @@ struct State {
     mars04::ImuSample imu;
     std::deque<std::array<float,9>> history;
     Clock::time_point rgb_arrival{},depth_arrival{},imu_arrival{};
+    double rgb_read_seconds=0,rgb_convert_seconds=0,depth_read_seconds=0,depth_convert_seconds=0;
 };
 class Acquisition {
     std::mutex mutex_;
@@ -111,22 +117,28 @@ class Acquisition {
         depth=std::async(std::launch::async,[&] {
             try {
                 while (active()) {
-                    const auto frame=camera.read_depth();
+                    const auto begin=Clock::now();const auto frame=camera.read_depth();
+                    const auto received=Clock::now();
                     auto image=depth_preview(frame);
                     auto points=std::make_shared<std::vector<mars04::Point>>(mars04::point_cloud(frame,rays));
                     const auto valid=std::count_if(points->begin(),points->end(),[](auto p){return p.z>0;});
                     std::lock_guard<std::mutex> lock(mutex_);
                     state_.depth=std::move(image);state_.cloud=std::move(points);
                     state_.valid_points=static_cast<std::size_t>(valid);++state_.depth_count;state_.depth_arrival=Clock::now();
+                    state_.depth_read_seconds+=std::chrono::duration<double>(received-begin).count();
+                    state_.depth_convert_seconds+=std::chrono::duration<double>(Clock::now()-received).count();
                 }
             } catch (const std::exception& e) {error(e.what());}
         });
         rgb=std::async(std::launch::async,[&] {
             try {
                 while (active()) {
-                    auto image=colour_preview(camera.read_rgb());
+                    const auto begin=Clock::now();auto frame=camera.read_rgb();
+                    const auto received=Clock::now();auto image=colour_preview(frame);
                     std::lock_guard<std::mutex> lock(mutex_);state_.rgb=std::move(image);
                     ++state_.rgb_count;state_.rgb_arrival=Clock::now();
+                    state_.rgb_read_seconds+=std::chrono::duration<double>(received-begin).count();
+                    state_.rgb_convert_seconds+=std::chrono::duration<double>(Clock::now()-received).count();
                 }
             } catch (const std::exception& e) {error(e.what());}
         });
@@ -254,7 +266,10 @@ public:
                 const double px=cloud_view.w/2.0+rx*470/camera_z+view.pan_x;
                 const double py=cloud_view.h/2.0+ry*470/camera_z+view.pan_y;
                 if (!std::isfinite(px) || !std::isfinite(py) || px<0 || py<0 || px>=cloud_view.w-1 || py>=cloud_view.h-1) continue;
-                const int ix=int(px),iy=int(py);const auto colour=range_colour(std::sqrt(p.x*p.x+p.y*p.y+p.z*p.z));
+                const int ix=int(px),iy=int(py);
+                // Organized points and depth preview share this acquisition frame.
+                // Reuse its range colour rather than sqrt + sin per rendered point.
+                const auto colour=state.depth && i<state.depth->pixels.size() ? state.depth->pixels[i] : 0xff53d8c4u;
                 for (int dy=0;dy<2;++dy) for (int dx=0;dx<2;++dx) {
                     const auto j=std::size_t(iy+dy)*cloud_view.w+std::size_t(ix+dx);
                     if (camera_z<zbuffer_[j]) {zbuffer_[j]=float(camera_z);pixels_[j]=colour;}
@@ -420,6 +435,7 @@ int main(int argc,char** argv) {
         State state,display;std::string notice;
         const auto start=Clock::now();auto fps_time=start;auto next_frame=start;
         std::uint64_t previous_rgb=0,previous_depth=0;double rgb_fps=0,depth_fps=0;unsigned rendered=0;
+        double draw_seconds=0,present_seconds=0;
         while (!done) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
@@ -464,15 +480,19 @@ int main(int argc,char** argv) {
                 depth_fps=state.depth_count>=previous_depth ? double(state.depth_count-previous_depth)/elapsed : 0;
                 previous_rgb=state.rgb_count;previous_depth=state.depth_count;fps_time=now;
             }
+            const auto draw_start=Clock::now();
             draw(cr.get(),state,display,view,cloud,frozen,acquisition.wanted(),rgb_fps,depth_fps,notice);
             cairo_surface_flush(surface.get());
+            draw_seconds+=std::chrono::duration<double>(Clock::now()-draw_start).count();
             if (save) {
                 try {notice=save_view(surface.get(),display);} catch (const std::exception& e) {notice=e.what();}
                 save=false;
             }
+            const auto present_start=Clock::now();
             if (SDL_UpdateTexture(sdl.texture,nullptr,cairo_image_surface_get_data(surface.get()),cairo_image_surface_get_stride(surface.get()))<0)
                 throw std::runtime_error(SDL_GetError());
             SDL_RenderClear(sdl.renderer);SDL_RenderCopy(sdl.renderer,sdl.texture,nullptr,nullptr);SDL_RenderPresent(sdl.renderer);++rendered;
+            present_seconds+=std::chrono::duration<double>(Clock::now()-present_start).count();
             if (run_seconds && std::chrono::duration<double>(now-start).count()>=run_seconds) done=true;
             next_frame+=std::chrono::milliseconds(67);
             if (next_frame<Clock::now()) next_frame=Clock::now();
@@ -481,10 +501,17 @@ int main(int argc,char** argv) {
         if (!screenshot.empty() && cairo_surface_write_to_png(surface.get(),screenshot.c_str())!=CAIRO_STATUS_SUCCESS)
             throw std::runtime_error("Cannot write requested screenshot");
         std::ostringstream json;
+        const auto average_ms=[](double total,std::uint64_t count){return count ? total*1000/double(count) : 0;};
         json<<"{\n  \"rgb_frames\": "<<state.rgb_count<<", \"depth_frames\": "<<state.depth_count
+            <<",\n  \"rgb_last_interval_fps\": "<<rgb_fps<<", \"depth_last_interval_fps\": "<<depth_fps
             <<",\n  \"imu_records\": "<<state.imu_count<<", \"imu_errors\": "<<state.imu_errors
             <<",\n  \"valid_points\": "<<state.valid_points<<", \"rendered_frames\": "<<rendered
-            <<",\n  \"imu_motion_validated\": false,\n  \"last_error\": "<<std::quoted(state.error)<<"\n}\n";
+            <<",\n  \"timing_ms\": {\"rgb_read\": "<<average_ms(state.rgb_read_seconds,state.rgb_count)
+            <<", \"rgb_convert\": "<<average_ms(state.rgb_convert_seconds,state.rgb_count)
+            <<", \"depth_read\": "<<average_ms(state.depth_read_seconds,state.depth_count)
+            <<", \"depth_geometry_preview\": "<<average_ms(state.depth_convert_seconds,state.depth_count)
+            <<", \"ui_draw\": "<<average_ms(draw_seconds,rendered)<<", \"ui_present\": "<<average_ms(present_seconds,rendered)<<"},"
+            <<"\n  \"imu_motion_validated\": false,\n  \"last_error\": "<<std::quoted(state.error)<<"\n}\n";
         std::cout<<json.str();
         if (!report.empty()) {std::ofstream file;file.exceptions(std::ios::failbit|std::ios::badbit);file.open(report);file<<json.str();file.close();}
         return run_seconds && (!state.rgb_count || !state.depth_count) ? 1 : 0;

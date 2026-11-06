@@ -93,6 +93,10 @@ Build the viewer in Docker with
 `docker build --platform linux/arm64 --build-arg MARS04_BUILD_GUI=ON -t sunny-mars04 .`;
 copy `/src/build/mars04-viewer` from the resulting container onto the N1.
 
+Timed GUI reports also include per-stage wall-clock timings and the latest RGB/depth
+rate. See the [N1 frame-rate investigation](docs/performance.md) for measured USB
+behaviour, tested alternatives and the scope of the CPU optimization.
+
 ## Build on Debian / Ubuntu
 
 ```sh

@@ -51,7 +51,7 @@ install(TARGETS mars04 EXPORT mars04Targets LIBRARY DESTINATION ${CMAKE_INSTALL_
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES udev/70-sunny-mars04.rules DESTINATION ${CMAKE_INSTALL_DATADIR}/sunny-mars04)
 install(FILES README.md LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
-install(FILES docs/protocol.md docs/validation.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs)
+install(FILES docs/protocol.md docs/validation.md docs/performance.md DESTINATION ${CMAKE_INSTALL_DOCDIR}/docs)
 configure_package_config_file(cmake/mars04Config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/mars04Config.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mars04)
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/mars04ConfigVersion.cmake VERSION ${PROJECT_VERSION} COMPATIBILITY SameMajorVersion)
 install(EXPORT mars04Targets NAMESPACE mars04:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/mars04)
