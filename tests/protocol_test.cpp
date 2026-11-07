@@ -34,6 +34,12 @@ int main() {
         const std::string serial="SYNTHETIC-TEST";
         std::copy(serial.begin(),serial.end(),info.begin()+44);
         require(parse_device_info(info).serial==serial,"Serial field offsets");
+        auto older=info;put32(older,0,4);
+        const std::string older_firmware="M04_V2.43.01.180307";
+        std::copy(older_firmware.begin(),older_firmware.end(),older.begin()+24);
+        require(parse_device_info(older).firmware==older_firmware,"Legacy type-4 firmware");
+        auto mismatched=older;put32(mismatched,0,2);
+        rejects([&]{parse_device_info(mismatched);});
         auto invalid=info;invalid[24]='X';rejects([&]{parse_device_info(invalid);});
         invalid=info;invalid[8]=0;rejects([&]{parse_device_info(invalid);});
         rejects([&]{parse_device_info({});});

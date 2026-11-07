@@ -1,7 +1,8 @@
 # Observed Mars04 legacy USB protocol
 
-Scope: USB ID `040e:4d35`, firmware `M04_V2.44.00.180322`, USB 2.0 on Linux.
-This describes one tested firmware, not a universal specification.
+Scope: USB ID `040e:4d35`, type 2 / `M04_V2.44.00.180322` and type 4 /
+`M04_V2.43.01.180307`. Both were tested on macOS USB 3; V2.44 was also tested
+on Linux USB 2. These are validated layouts, not a universal specification.
 All multi-byte integers and IEEE 754 fields on the wire are little-endian.
 
 ## Control transfer
@@ -19,7 +20,7 @@ Query select and response must be serialized as a pair.
 | `0x10009` | Legacy IMU batch | Experimental |
 | `0x10054` | Additional camera calibration | No |
 
-Device-info offsets: type u32 at 0 (tested value 2); width/wire-height u16 at
+Device-info offsets: type u32 at 0 (tested values 2 and 4); width/wire-height u16 at
 8/10 (224/173); RGB width/height u16 at 14/16 (1344/760); firmware ASCII field
 at 24, length 20; serial ASCII at 44, length 19. Actual depth height is
 wire-height minus one metadata row. Bytes after known fields are not interpreted.

@@ -61,7 +61,8 @@ std::vector<std::uint16_t> depth_millimetres(const DepthFrame&);
 class Camera {
 public:
     // Claims interface 0 exclusively and resets this camera's USB queues.
-    // Only this VID/PID and M04_V2.44.00.180322 firmware are supported.
+    // Only this VID/PID and the validated type-2/V2.44 and type-4/V2.43
+    // device/firmware pairs are supported (see README).
     explicit Camera(unsigned timeout_ms = 3000);
     ~Camera();
     Camera(const Camera&) = delete;

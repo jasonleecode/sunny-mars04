@@ -30,12 +30,14 @@ std::uint8_t clip(int x) { return static_cast<std::uint8_t>(std::clamp(x,0,255))
 
 DeviceInfo parse_device_info(const std::vector<std::uint8_t>& b) {
     if (b.size()<64) throw std::runtime_error("Truncated device info");
-    if (u32(b,0)!=2 || u16(b,8)!=depth_width || u16(b,10)!=depth_height+1 ||
+    const auto type=u32(b,0);
+    if ((type!=2 && type!=4) || u16(b,8)!=depth_width || u16(b,10)!=depth_height+1 ||
         u16(b,14)!=rgb_width || u16(b,16)!=rgb_height)
         throw std::runtime_error("Unsupported device type or dimensions");
     DeviceInfo result{text(b,24,20),text(b,44,19)};
-    if (result.firmware!="M04_V2.44.00.180322")
-        throw std::runtime_error("Unsupported firmware: "+result.firmware);
+    if (!((type==2 && result.firmware=="M04_V2.44.00.180322") ||
+          (type==4 && result.firmware=="M04_V2.43.01.180307")))
+        throw std::runtime_error("Unsupported device/firmware combination: "+result.firmware);
     return result;
 }
 

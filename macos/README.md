@@ -59,6 +59,14 @@ are local and are not uploaded by the application.
 
 ## Hardware validation
 
+The viewer also supports the validated type-4 `M04_V2.43.01.180307` device.
+Its dimensions and packet lengths match the type-2 V2.44 model. Calibration is
+read from each connected camera, rather than reusing another unit's lens data.
+The V2.43 CLI test read 30 frames per stream in about 1.97 seconds without
+duplicate/discontinuous sequences, with about 36500 positive depth pixels.
+Only those two known device/firmware pairs are allowed; unknown pairs remain
+rejected. High-FPS mode experiments are not enabled.
+
 - Core protocol/geometry/colour/IMU malformed-input tests passed on Apple Clang.
 - Native CLI: RGB/depth 60 frames each in approximately 4 seconds, no duplicate
   sequences or sequence discontinuities.

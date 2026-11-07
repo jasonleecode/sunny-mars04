@@ -11,7 +11,7 @@ OpenCV 或 ROS。IMU 目前仅支持实验性协议诊断，尚未取得可信�
 
 | Feature | Status |
 | --- | --- |
-| Firmware | Only `M04_V2.44.00.180322`; other versions are rejected |
+| Firmware | Type 2: `M04_V2.44.00.180322`; type 4: `M04_V2.43.01.180307`; other combinations are rejected |
 | RGB | 1344×760, I420 planar YUV, RGB PNG and raw `.yuv` |
 | Depth | 224×172, 16-bit radial distance PNG in millimetres; zero invalid |
 | Point cloud | Calibrated XYZ in metres, binary little-endian PLY |
