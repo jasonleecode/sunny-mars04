@@ -1,5 +1,26 @@
 # N1 frame-rate investigation
 
+## Follow-up: direct connection restores dual 15 fps (2026-11-07)
+
+After replacing the cable, the hub-connected camera stopped answering vendor
+control requests; reconnect attempts timed out, and a USB reset failed to
+enumerate it. The user unplugged/replugged the camera and connected the new
+cable **directly to the N1, bypassing the hub**. Metadata queries and capture
+then recovered. The unchanged capture tool read RGB and depth, 30 frames each,
+in 2.034 s and 2.021 s respectively, without duplicate/discontinuous sequences.
+The live viewer subsequently displayed approximately **14.9 fps on both streams**.
+The direct connection still negotiated USB 2.0 high speed (480 Mbit/s).
+
+This demonstrates that the earlier dual-stream slowdown is not an unavoidable
+N1 compute limit or fixed firmware FPS ceiling. The original hub connection
+path is implicated. Power cycling and connection topology changed together,
+so these observations do not distinguish hub power/signal issues from its
+scheduling or the camera's previous stalled state. The new cable is capable
+of working with the camera in the direct setup. No driver change was needed
+to restore capture; the viewer's Reconnect button reopened it.
+
+The original measurements below describe the **hub-connected setup**.
+
 Measured on N1 / legacy Mars04 firmware, 2026-11-06. Observations on one setup,
 not a universal camera specification. USB connection: high speed, 480 Mbit/s,
 through a USB 2.0 hub.
@@ -70,7 +91,7 @@ mars04-viewer --run-seconds 20 --report /tmp/mars04-timing.json
 `ui_present`. Reads include USB waiting and parsing. The last approximately
 one-second RGB/depth rates are also recorded.
 
-An optimized viewer run still spent about 123 ms reading RGB and 10 ms converting
-it, consistent with roughly 7.5 fps delivery in that dual-stream run. Higher
-stable rates require further verified transport/firmware work; FPS counters
-and faster redraw timers do not create additional camera frames.
+An optimized hub-connected viewer run still spent about 123 ms reading RGB and
+10 ms converting it, consistent with roughly 7.5 fps delivery in that run.
+The direct-connection follow-up above demonstrates dual 15 fps is possible.
+FPS counters and faster redraw timers do not create additional camera frames.
