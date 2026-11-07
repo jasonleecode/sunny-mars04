@@ -1,5 +1,10 @@
 # N1 frame-rate investigation
 
+For the later Mac USB 3 test, see [macOS validation](../macos/README.md).
+The default stream produced valid depth at 15 fps. An experimental 30 fps
+request increased packet delivery rate but produced all-zero processed depth,
+so it was not retained as a supported point-cloud mode.
+
 ## Follow-up: direct connection restores dual 15 fps (2026-11-07)
 
 After replacing the cable, the hub-connected camera stopped answering vendor

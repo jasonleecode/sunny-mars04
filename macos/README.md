@@ -74,3 +74,27 @@ USB 3 operation alone did **not** raise the tested default stream rate above
 verification. The IMU's raw channel values remain unvalidated; zero/nonzero is
 not a motion-validity test. Private camera images and device serials are not
 included in the repository.
+
+### High-rate packet delivery is not valid depth
+
+A subsequent isolated C++ experiment requested 30 fps through the SDK-matched
+runtime command. On USB 3 both RGB and depth **packets** arrived at about 30 fps,
+but the processed depth plane became all zero. A fixed-scene validity check
+after a complete power cycle measured:
+
+| Stage | Depth packets | Frames with positive depth | Last valid pixels |
+| --- | --- | --- | --- |
+| Fresh default 15 fps | 61 | 61 | 25495 |
+| Requested 30 fps | 121 | 0 | 0 |
+| Restored 15 fps register | 61 | 0 | 0 |
+
+SDK-matched mode/exposure commands did not recover valid processed depth in
+another experiment. A complete camera power cycle restored default capture;
+the restored CLI test produced 34505 positive depth pixels, and the installed
+GUI again displayed a live cloud with about 34500 valid points.
+
+Consequently the experimental setter and automatic 30 fps selection were
+**not retained** in the public driver or installed app. The shipped app keeps
+the working default mode. USB bandwidth is not the only issue: a correct
+firmware-specific depth mode transition/calculation path is still missing.
+RGB/packet FPS alone must not be reported as a usable 30 fps point-cloud mode.
