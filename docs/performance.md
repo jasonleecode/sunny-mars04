@@ -21,6 +21,40 @@ to restore capture; the viewer's Reconnect button reopened it.
 
 The original measurements below describe the **hub-connected setup**.
 
+## Direct high-FPS checks (2026-11-07)
+
+With the camera directly connected and no GUI processing, a matching SDK's
+runtime FPS command (`0x10012` + little-endian u32) acknowledged a request for
+30 fps. After excluding a two-second warmup, measured results remained:
+
+| Requested setup | RGB | Depth |
+| --- | --- | --- |
+| 30 fps, both readers | 15.00 fps | 15.06 fps |
+| 30 fps, depth reader only | — | 15.00 fps |
+| 30 fps, RGB reader only | 14.96 fps | — |
+| Restored 15 fps, both readers | 15.01 fps | 15.00 fps |
+
+These runs had no sequence discontinuities. This time the runtime command was
+tested without the subsequent USB reset that had failed in an earlier probe;
+the connection stayed usable and the live viewer was restored afterward.
+An acknowledgement is therefore not proof that the device changed acquisition
+rate. A complete supported mode transition, firmware-specific behaviour, or
+USB speed-dependent policy could still matter; these tests do not establish a
+universal hardware maximum.
+
+The matching SDK's raw-disable opcode `0x10023` also did not shorten packets on
+this firmware: successive depth metadata records stayed 1,021,952 bytes apart.
+Raw-enable `0x10022` was issued afterward to restore the prior configuration.
+No unsupported mode is enabled by the public driver.
+
+The camera's BOS descriptor advertises SuperSpeed (5 Gbit/s) capability, while
+the N1 connection actually negotiated 480 Mbit/s. With the current packet sizes,
+dual 30 fps would require 76.7 MB/s of payload, already above USB 2.0's raw
+60 MB/s line-rate ceiling before overhead. A USB 3 host is a useful next
+comparison, but has not been tested and is not a promise of higher FPS. Single
+stream tests still remaining at 15 fps show that bandwidth alone does not
+explain every aspect of the current operating mode. No firmware was flashed.
+
 Measured on N1 / legacy Mars04 firmware, 2026-11-06. Observations on one setup,
 not a universal camera specification. USB connection: high speed, 480 Mbit/s,
 through a USB 2.0 hub.
