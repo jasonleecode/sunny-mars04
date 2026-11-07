@@ -44,6 +44,10 @@ sudo cmake --install build
 mars04-viewer
 ```
 
+For the native macOS app, build and packaging instructions are in
+[macos/README.md](macos/README.md). The Apple Silicon build has been tested with
+the camera connected at USB 3 speed; the UI reports the negotiated USB version.
+
 The GUI is optional and disabled by default. It needs the same camera USB
 permissions as the CLI. Runtime dependencies are `libsdl2-2.0-0`, `libcairo2`,
 libusb, and a sans-serif font (for example `fonts-dejavu-core`).
@@ -109,7 +113,7 @@ sudo cmake --install build
 
 For a library-only build use `-DMARS04_BUILD_TOOLS=OFF`. The library needs
 libusb; libpng is used only by the capture tool. C++17, CMake ≥ 3.16 required.
-Linux is the supported and tested platform.
+Linux arm64 and macOS Apple Silicon have been tested; Windows has not.
 
 ### Docker build
 

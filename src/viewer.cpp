@@ -53,12 +53,12 @@ struct Image {
 };
 std::shared_ptr<Image> colour_preview(const mars04::RgbFrame& frame) {
     auto out=std::make_shared<Image>();out->w=672;out->h=380;
-    out->pixels.resize(std::size_t(out->w)*out->h);out->metadata=frame.metadata;
+    out->pixels.resize(std::size_t(out->w)*std::size_t(out->h));out->metadata=frame.metadata;
     constexpr std::size_t plane=mars04::rgb_width*mars04::rgb_height;
     const auto clip=[](int n){return std::uint32_t(std::clamp(n,0,255));};
     for (int y=0;y<out->h;++y) for (int x=0;x<out->w;++x) {
-        const auto dst=std::size_t(y)*out->w+x;
-        const auto uv=std::size_t(y)*out->w+x;
+        const auto dst=std::size_t(y)*std::size_t(out->w)+std::size_t(x);
+        const auto uv=dst;
         const int c=int(frame.i420[std::size_t(y*2)*mars04::rgb_width+std::size_t(x*2)])-16;
         const int d=int(frame.i420[plane+uv])-128,e=int(frame.i420[plane+plane/4+uv])-128;
         out->pixels[dst]=0xff000000u|(clip((298*c+409*e+128)/256)<<16)|
@@ -78,7 +78,7 @@ std::shared_ptr<Image> depth_preview(const mars04::DepthFrame& frame) {
     return out;
 }
 struct State {
-    std::string status="Connecting to camera...",firmware,error;
+    std::string status="Connecting to camera...",firmware,error,usb_label="USB";
     bool connected=false;
     std::shared_ptr<const Image> rgb,depth;
     std::shared_ptr<const std::vector<mars04::Point>> cloud;
@@ -104,6 +104,8 @@ class Acquisition {
         {
             std::lock_guard<std::mutex> lock(mutex_);
             state_=State{};state_.status="Streaming";state_.connected=true;state_.firmware=camera.info().firmware;
+            const auto speed=camera.info().usb_speed_mbps;
+            state_.usb_label=speed>=5000 ? "USB 3.x" : speed==480 ? "USB 2.0" : "USB";
         }
         std::atomic<bool> failed{false};
         auto active=[&]{return wanted_ && !quit_ && !failed;};
@@ -322,7 +324,7 @@ void draw(cairo_t* cr,const State& state,const State& display,const View& view,C
     label(cr,22,43,"MARS04",29,0xf1f5f9,true);label(cr,175,43,"/  CAMERA LAB",20,0x86a6be);
     label(cr,23,71,"RGB  /  Depth  /  Interactive XYZ  /  IMU diagnostics",14,0x8299af);
     source(cr,state.connected ? 0x58dbb1 : 0xefb86c);cairo_arc(cr,642,38,4,0,2*pi);cairo_fill(cr);
-    label(cr,655,43,state.connected ? "LIVE USB 2.0" : "OFFLINE",13,state.connected ? 0x7ee5c3 : 0xf3c586,true);
+    label(cr,655,43,state.connected ? "LIVE "+state.usb_label : "OFFLINE",13,state.connected ? 0x7ee5c3 : 0xf3c586,true);
     label(cr,641,68,"RGB "+fixed(rgb_fps)+" / Depth "+fixed(depth_fps)+" fps",12,0x94a9be);
     button(cr,connect_button,wanted ? "Disconnect" : "Reconnect",true);
     button(cr,freeze_button,frozen ? "Resume" : "Freeze");
@@ -416,7 +418,12 @@ int main(int argc,char** argv) {
         }
         Sdl sdl;
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY,"linear");
-        sdl.window=SDL_CreateWindow("Mars04 Camera Lab",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,screen_w,screen_h,SDL_WINDOW_RESIZABLE);
+        SDL_Rect usable{};int initial_w=screen_w,initial_h=screen_h;
+        if (SDL_GetDisplayUsableBounds(0,&usable)==0) {
+            const double scale=std::min({1.0,double(usable.w-32)/screen_w,double(usable.h-48)/screen_h});
+            initial_w=std::max(800,int(screen_w*scale));initial_h=std::max(500,int(screen_h*scale));
+        }
+        sdl.window=SDL_CreateWindow("Mars04 Camera Lab",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,initial_w,initial_h,SDL_WINDOW_RESIZABLE);
         if (!sdl.window) throw std::runtime_error(SDL_GetError());
         SDL_SetWindowMinimumSize(sdl.window,1000,625);
         // CPU renderer avoids competing with the N1 video player's GPU context.

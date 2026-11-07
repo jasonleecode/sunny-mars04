@@ -62,6 +62,14 @@ Camera::Camera(unsigned timeout_ms):impl_(std::make_unique<Impl>(timeout_ms)) {
     check(libusb_claim_interface(impl_->handle,0),"Claim camera interface 0");
     impl_->claimed=true;
     impl_->device=parse_device_info(impl_->query(0x10050));
+    switch (libusb_get_device_speed(libusb_get_device(impl_->handle))) {
+    case LIBUSB_SPEED_LOW: impl_->device.usb_speed_mbps=1;break;
+    case LIBUSB_SPEED_FULL: impl_->device.usb_speed_mbps=12;break;
+    case LIBUSB_SPEED_HIGH: impl_->device.usb_speed_mbps=480;break;
+    case LIBUSB_SPEED_SUPER: impl_->device.usb_speed_mbps=5000;break;
+    case LIBUSB_SPEED_SUPER_PLUS: impl_->device.usb_speed_mbps=10000;break;
+    default: break;
+    }
     impl_->calibration=parse_lens(impl_->query(0x10015));
     check(libusb_reset_device(impl_->handle),"Reset camera USB queues");
 }

@@ -14,3 +14,13 @@ jobs:
       - run: ctest --test-dir build --output-on-failure
       - run: ./build/mars04-capture --help
       - run: ./build/mars04-viewer --help
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install cmake pkgconf libusb sdl2 cairo libpng
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMARS04_BUILD_GUI=ON
+      - run: cmake --build build --parallel 3
+      - run: ctest --test-dir build --output-on-failure
+      - run: ./build/mars04-capture --help
+      - run: ./build/mars04-viewer.app/Contents/MacOS/mars04-viewer --help

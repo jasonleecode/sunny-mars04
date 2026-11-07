@@ -20,6 +20,7 @@ inline constexpr double depth_units_per_metre = 5460.0;
 struct DeviceInfo {
     std::string firmware;
     std::string serial;
+    int usb_speed_mbps = 0; // Negotiated link rate; zero when unknown/offline.
 };
 // fx, fy, cx, cy, k1, k2, p1, p2, k3 (Brown-Conrady model).
 using Lens = std::array<float, 9>;
